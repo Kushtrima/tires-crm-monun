@@ -1,0 +1,231 @@
+{% extends "base.html" %}
+
+{% block title %}Services{% endblock %}
+
+{% block content %}
+    <div class="container-fluid">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>Services Management</h2>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addServiceModal">
+                <i class="bi bi-plus-lg"></i> Add Service
+            </button>
+        </div>
+
+        <!-- Add this after the header section -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <form id="filterForm" method="GET" action="{{ url_for('main.services') }}" class="row g-3">
+                    <!-- Search input -->
+                    <div class="col-md-8">
+                        <label class="form-label">Search</label>
+                        <input type="text" 
+                               class="form-control" 
+                               name="search" 
+                               value="{{ request.args.get('search', '') }}"
+                               placeholder="Search services..."
+                               oninput="submitForm()">
+                    </div>
+                    
+                    <!-- Category Filter -->
+                    <div class="col-md-2">
+                        <label class="form-label">Category</label>
+                        <select class="form-select" name="category" onchange="submitForm()">
+                            <option value="">All Categories</option>
+                            {% for category in ['Installation', 'Repair', 'Maintenance'] %}
+                                <option value="{{ category }}" 
+                                        {% if request.args.get('category') == category %}selected{% endif %}>
+                                    {{ category }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <!-- Reset Button -->
+                    <div class="col-md-2">
+                        <label class="form-label">&nbsp;</label>
+                        <a href="{{ url_for('main.services') }}" 
+                           class="btn btn-secondary d-block">Reset</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Services Table -->
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Service</th>
+                                <th>Category</th>
+                                <th>Price (CHF)</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for service in services %}
+                            <tr>
+                                <td>#{{ service.id }}</td>
+                                <td>
+                                    <strong>{{ service.name }}</strong><br>
+                                    <small class="text-muted">{{ service.description }}</small>
+                                </td>
+                                <td>
+                                    <span class="badge bg-info">{{ service.category }}</span>
+                                </td>
+                                <td>CHF {{ "%.2f"|format(service.price) }}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-primary edit-service-btn" 
+                                            data-id="{{ service.id }}"
+                                            data-name="{{ service.name|replace('"', '&quot;') }}"
+                                            data-description="{{ service.description|replace('"', '&quot;')|replace('\n', ' ') }}"
+                                            data-price="{{ service.price }}"
+                                            data-category="{{ service.category }}">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <form style="display: inline;" method="POST" action="{{ url_for('main.delete_service', id=service.id) }}">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to delete this service?')">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Service Modal -->
+    <div class="modal fade" id="addServiceModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add New Service</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Service Name</label>
+                            <input type="text" class="form-control" name="name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Category</label>
+                            <select class="form-select" name="category" required>
+                                <option value="Installation">Installation</option>
+                                <option value="Repair">Repair</option>
+                                <option value="Maintenance">Maintenance</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Description</label>
+                            <textarea class="form-control" name="description" rows="3"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Price (CHF)</label>
+                            <input type="number" class="form-control" name="price" step="0.10" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Add Service</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Service Modal -->
+    <div class="modal fade" id="editServiceModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Service</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="editServiceForm" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Service Name</label>
+                            <input type="text" class="form-control" id="edit_name" name="name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Category</label>
+                            <select class="form-select" id="edit_category" name="category" required>
+                                <option value="Installation">Installation</option>
+                                <option value="Repair">Repair</option>
+                                <option value="Maintenance">Maintenance</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Description</label>
+                            <textarea class="form-control" id="edit_description" name="description" rows="3"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Price (CHF)</label>
+                            <input type="number" class="form-control" id="edit_price" name="price" step="0.10" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Global timeout variable
+            let timeout = null;
+
+            // Handle form submission
+            window.submitForm = function() {
+                clearTimeout(timeout);
+                timeout = setTimeout(function() {
+                    document.getElementById('filterForm').submit();
+                }, 500);
+            };
+
+            // Handle edit button clicks
+            document.querySelectorAll('.edit-service-btn').forEach(function(button) {
+                button.addEventListener('click', function() {
+                    const id = this.dataset.id;
+                    const name = this.dataset.name;
+                    const description = this.dataset.description;
+                    const price = this.dataset.price;
+                    const category = this.dataset.category;
+
+                    document.getElementById('edit_name').value = name;
+                    document.getElementById('edit_description').value = description;
+                    document.getElementById('edit_price').value = price;
+                    document.getElementById('edit_category').value = category;
+                    
+                    const form = document.getElementById('editServiceForm');
+                    form.action = '/services/edit/' + id;
+                    
+                    const modal = document.getElementById('editServiceModal');
+                    const bsModal = new bootstrap.Modal(modal);
+                    bsModal.show();
+                });
+            });
+        });
+    </script>
+{% endblock %} 

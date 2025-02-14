@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Invoice #{{ order.id }}</title>
+    <style>
+        @page {
+            size: A4 portrait;
+            margin: 65px;
+            padding: 0;
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: Helvetica, Arial, sans-serif;
+            font-size: 10pt;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 2cm;
+            background: white;
+            width: 210mm;  /* A4 width */
+            min-height: 297mm;  /* A4 height */
+        }
+
+        /* For screen display only */
+        @media screen {
+            body {
+                padding: 2cm;
+            }
+        }
+
+        /* For PDF export only */
+        @media print {
+            body {
+                padding: 65px;  /* Match the @page margin */
+            }
+        }
+
+        table {
+            table-layout: fixed;
+            width: 100%;
+        }
+        .container {
+            position: relative;
+            width: 100%;
+            min-height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        .content-wrapper {
+            flex: 1;
+        }
+        .top-line {
+            width: 100%;
+            height: 3px;
+            background-color: #2196F3;
+            margin-bottom: 60px;  /* Increased spacing */
+        }
+        .header-table {
+            margin-bottom: 80px;  /* Increased spacing */
+            border-collapse: collapse;
+        }
+        .header-table td {
+            vertical-align: top;
+            padding: 0;
+            border: none;
+        }
+        .company-info {
+            width: 60%;
+            padding-right: 20px;
+        }
+        .company-name {
+            font-size: 24pt;
+            color: #2196F3;
+            margin-bottom: 20px;  /* Increased spacing */
+            font-weight: bold;
+        }
+        .company-details {
+            color: #666;
+            font-size: 9pt;
+            line-height: 1.4;
+        }
+        .invoice-info {
+            width: 40%;
+            text-align: right;
+        }
+        .invoice-label {
+            font-size: 11pt;
+            color: #2196F3;
+            text-transform: uppercase;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+        .invoice-details {
+            color: #666;
+            font-size: 9pt;
+            line-height: 1.4;
+        }
+        .invoice-details strong {
+            color: #333;
+        }
+        .client-section {
+            margin: 80px 0;  /* Increased spacing */
+            padding-left: 10px;
+            border-left: 2px solid #2196F3;
+        }
+        .client-label {
+            text-transform: uppercase;
+            color: #2196F3;
+            font-size: 9pt;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .items-table {
+            margin: 60px 0;  /* Increased spacing */
+            border-collapse: collapse;
+            width: 100%;
+        }
+        .items-table th {
+            background-color: white !important;
+            border-bottom: 2px solid #2196F3;
+            padding: 15px 10px;  /* Increased padding */
+            text-align: left;
+            font-size: 9pt;
+            color: #2196F3;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .items-table td {
+            padding: 12px 10px;  /* Increased padding */
+            border-bottom: 1px solid #eee;
+            font-size: 9pt;
+            color: #666;
+            vertical-align: top;
+        }
+        .items-table .amount {
+            font-family: 'Courier New', Courier, monospace;
+            text-align: right;
+            white-space: nowrap;
+        }
+        .totals-section {
+            width: 100%;
+            margin-top: 60px;  /* Increased spacing */
+        }
+        .totals-table {
+            width: 35%;
+            margin-left: 65%;
+            border-collapse: collapse;
+        }
+        .totals-table td {
+            padding: 8px 10px;  /* Increased padding */
+            font-size: 9pt;
+            color: #666;
+            border: none;
+        }
+        .totals-table .amount {
+            font-family: 'Courier New', Courier, monospace;
+            text-align: right;
+            white-space: nowrap;
+        }
+        .total-line td {
+            padding-top: 15px;  /* Increased padding */
+            color: #333;
+            font-weight: bold;
+            border-top: 2px solid #2196F3;
+        }
+        .bottom-section {
+            margin-top: 120px;  /* Large space before bottom section */
+            width: 100%;
+        }
+        .payment-info {
+            padding: 25px;  /* Increased padding */
+            background-color: #f8f9fa !important;
+            border-radius: 3px;
+            margin-bottom: 30px;  /* Increased spacing */
+        }
+        .payment-title {
+            color: #2196F3;
+            text-transform: uppercase;
+            font-size: 9pt;
+            margin-bottom: 15px;  /* Increased spacing */
+            font-weight: bold;
+        }
+        .payment-details {
+            color: #666;
+            font-size: 9pt;
+            line-height: 1.8;  /* Increased line height */
+        }
+        .footer {
+            text-align: center;
+            color: #666;
+            font-size: 9pt;
+            padding: 25px 0;  /* Increased padding */
+        }
+
+        /* For screen display */
+        @media screen {
+            .payment-info {
+                margin-top: 50px;
+            }
+        }
+
+        /* For PDF export */
+        @media print {
+            .payment-info {
+                position: fixed;
+                bottom: 100px;
+                left: 65px;
+                right: 65px;
+            }
+            .footer {
+                position: fixed;
+                bottom: 65px;
+                left: 65px;
+                right: 65px;
+                border-top: none;
+            }
+            .bottom-section {
+                position: fixed;
+                bottom: 65px;
+                left: 65px;
+                right: 65px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="content-wrapper">
+            <div class="top-line"></div>
+            
+            <table class="header-table">
+                <tr>
+                    <td class="company-info">
+                        <div class="company-name">COMPANY NAME</div>
+                        <div class="company-details">
+                            123 Business Street<br>
+                            8000 Zürich, Switzerland<br>
+                            +41 123 456 789<br>
+                            info@company.com<br>
+                            CHE-XXX.XXX.XXX MWST
+                        </div>
+                    </td>
+                    <td class="invoice-info">
+                        <div class="invoice-label">Invoice</div>
+                        <div class="invoice-details">
+                            <strong>Invoice #:</strong> {{ order.id }}<br>
+                            <strong>Date:</strong> {{ order.created_at.strftime('%d.%m.%Y') }}<br>
+                            <strong>Due Date:</strong> {{ (order.created_at + timedelta(days=30)).strftime('%d.%m.%Y') }}
+                        </div>
+                    </td>
+                </tr>
+            </table>
+
+            <div class="client-section">
+                <div class="client-label">Bill To</div>
+                <strong>{{ order.customer_name }}</strong><br>
+                {{ order.customer_phone }}
+            </div>
+
+            <table class="items-table">
+                <thead>
+                    <tr>
+                        <th width="35%">Item</th>
+                        <th width="35%">Description</th>
+                        <th width="10%">Quantity</th>
+                        <th width="10%">Price</th>
+                        <th width="10%">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in order.items %}
+                    <tr>
+                        <td>
+                            {% if item.item_type == 'product' %}
+                                {{ products[item.item_id].brand }} {{ products[item.item_id].name }}
+                            {% else %}
+                                {{ services[item.item_id].name }}
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if item.item_type == 'product' %}
+                                {{ products[item.item_id].size }} - {{ products[item.item_id].type }}
+                            {% else %}
+                                {{ services[item.item_id].description }}
+                            {% endif %}
+                        </td>
+                        <td>{{ item.quantity }}</td>
+                        <td class="amount">CHF {{ "%.2f"|format(item.price) }}</td>
+                        <td class="amount">CHF {{ "%.2f"|format(item.price * item.quantity) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <div class="totals-section">
+                <table class="totals-table">
+                    <tr>
+                        <td>Subtotal</td>
+                        <td class="amount">CHF {{ "%.2f"|format(order.total_amount) }}</td>
+                    </tr>
+                    <tr>
+                        <td>VAT (7.7%)</td>
+                        <td class="amount">CHF {{ "%.2f"|format(order.total_amount * 0.077) }}</td>
+                    </tr>
+                    <tr class="total-line">
+                        <td>Total</td>
+                        <td class="amount">CHF {{ "%.2f"|format(order.total_amount * 1.077) }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <div class="bottom-section">
+            <div class="payment-info">
+                <div class="payment-title">Payment Details</div>
+                <div class="payment-details">
+                    Bank: Sample Bank AG<br>
+                    IBAN: CH XX XXXX XXXX XXXX XXXX X<br>
+                    BIC/SWIFT: XXXXXXXX<br>
+                    Reference: Invoice #{{ order.id }}
+                </div>
+            </div>
+
+            <div class="footer">
+                Thank you for your business
+            </div>
+        </div>
+    </div>
+</body>
+</html> 
